@@ -1,1 +1,6 @@
-export const DB_NAME = "videotube";
+const constants = {
+    LIMIT: "16kb",
+    DB_NAME: "videotube"
+};
+
+export default constants
