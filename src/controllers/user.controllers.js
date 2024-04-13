@@ -4,6 +4,21 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/Cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+const generateAccessAndRefreshToken = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+        const accessToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
+
+        user.refreshToken = refreshToken;
+        await user.save({ validateBeforeSave: false });
+
+        return { accessToken, refreshToken };
+    } catch (error) {
+        throw new ApiError(500, "Something went wrong while generating access and refresh token.")
+    }
+}
+
 const userRegistration = asyncHandler(async (req, res) => {
     const { userName, email, fullName, password } = req.body;
 
@@ -56,7 +71,52 @@ const userRegistration = asyncHandler(async (req, res) => {
     )
 })
 
+const loginUser = asyncHandler(async (req, res) => {
+    const { userNameOrEmail, password } = req.body;
+
+    if (!userNameOrEmail) {
+        throw new ApiError(400, "User name or email is required!");
+    }
+
+    const user = await User.findOne({
+        $or: [
+            { email: userNameOrEmail },
+            { userName: userNameOrEmail }
+        ]
+    }).select("-password -refreshToken");
+
+    if (!user) {
+        throw new ApiError(404, "User does not exists.")
+    }
+
+    const isValidPassword = await user.isPasswordCorrect(password);
+    if (!isValidPassword) {
+        throw new ApiError(401, "Invalid login Credentails!")
+    }
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res.
+        status(200).
+        res.cookie("accessToken", accessToken, options).
+        res.cookie("refreshToken", refreshToken, options).
+        json(new ApiResponse(200,
+            {
+                user: user, accessToken, refreshToken
+            },
+            "User logged In Successfully"
+        ))
+
+
+})
+
 
 export {
-    userRegistration
+    userRegistration,
+    loginUser
 }
