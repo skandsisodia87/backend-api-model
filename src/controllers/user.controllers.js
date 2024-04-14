@@ -169,9 +169,66 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 })
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+    return res
+        .status(200)
+        .json(new ApiResponse(200, req?.user, "User details fetched  successfully."))
+})
+
+const updatePassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+        throw new ApiError(400, "All fields are required.");
+    }
+
+    const user = await User.findById(req.user._id);
+
+    console.log(user)
+    const isCorrectPassword = await user?.isPasswordCorrect(oldPassword);
+
+    if (!isCorrectPassword) {
+        throw new ApiError(400, "Invalid Old Password");
+    }
+
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Password changed successfully."))
+})
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    const { userName, fullName, email } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    const updateData = {
+        fullName: fullName || user.fullName,
+        userName: userName || user.userName,
+        email: email || user.email,
+    }
+
+    const updated = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: updateData
+        },
+        { new: true }
+    ).select("-password -refreshToken");
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updated, "User Details updated successfully."))
+})
+
 export {
     userRegistration,
     logInUser,
     logOutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    getCurrentUser,
+    updatePassword,
+    updateAccountDetails
 }
