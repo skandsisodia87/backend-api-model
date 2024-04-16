@@ -202,25 +202,24 @@ const updatePassword = asyncHandler(async (req, res) => {
 const updateAccountDetails = asyncHandler(async (req, res) => {
     const { userName, fullName, email } = req.body;
 
-    const user = await User.findById(req.user._id);
-
-    const updateData = {
-        fullName: fullName || user.fullName,
-        userName: userName || user.userName,
-        email: email || user.email,
+    if (!userName || !fullName || !email) {
+        throw new ApiError(400, "All fields are required.")
     }
-
-    const updated = await User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: updateData
+            $set: {
+                email,
+                userName,
+                fullName
+            }
         },
         { new: true }
     ).select("-password -refreshToken");
 
     return res
         .status(200)
-        .json(new ApiResponse(200, updated, "User Details updated successfully."))
+        .json(new ApiResponse(200, user, "User Details updated successfully."))
 })
 
 const updateAvatarImage = asyncHandler(async (req, res) => {
@@ -246,8 +245,8 @@ const updateAvatarImage = asyncHandler(async (req, res) => {
     )
 
     return res
-    .status(200)
-    .json(new ApiResponse(200, user,"Avatar updated successfully."))
+        .status(200)
+        .json(new ApiResponse(200, user, "Avatar updated successfully."))
 })
 
 const updateCoverImage = asyncHandler(async (req, res) => {
@@ -273,8 +272,76 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     )
 
     return res
-    .status(200)
-    .json(new ApiResponse(200, user,"Cover image updated successfully."))
+        .status(200)
+        .json(new ApiResponse(200, user, "Cover image updated successfully."))
+})
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    const { userName } = req.params;
+
+    if (!userName?.trim()) {
+        throw new ApiError(400, "UserName is missing!");
+    }
+
+    const channel = await User.aggregate([
+        {
+            $match: {
+                userName: userName?.toLowerCase()
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "Subscribers"
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "SubscribeTo"
+            }
+        },
+        {
+            $addFields: {
+                SubscribersCount: {
+                    $size: "$Subscribers"
+                },
+                channelsSubscribedTo: {
+                    $size: "$SubscribeTo"
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$Subscribers.subscriber"] },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                fullName: 1,
+                emial: 1,
+                fullName: 1,
+                channelsSubscribedTo: 1,
+                SubscribersCount,
+                isSubscribed,
+                avatar: 1,
+                coverImage: 1,
+            }
+        }
+    ])
+
+    if (!channel?.length) {
+        throw new ApiError("Channel does not exists.")
+    }
+    return res
+        .status(200)
+        .json(new ApiResponse(200, channel[0], "User channel fetched successfully."))
 })
 
 export {
@@ -286,5 +353,6 @@ export {
     updatePassword,
     updateAccountDetails,
     updateAvatarImage,
-    updateCoverImage
+    updateCoverImage,
+    getUserChannelProfile
 }
