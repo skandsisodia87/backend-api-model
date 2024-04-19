@@ -43,8 +43,8 @@ const userRegistration = asyncHandler(async (req, res) => {
 
     const avatarLocalPath = req?.files?.avatar[0]?.path;
     let coverImageLocalPath;
-    if (req.files && Array.isArray(req.files) && req.files.coverImage.length > 0) {
-        coverImageLocalPath = req.files.coverImage[0].path;
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLocalPath = req.files.coverImage[0].path
     }
 
     if (!avatarLocalPath) {
@@ -62,8 +62,14 @@ const userRegistration = asyncHandler(async (req, res) => {
         userName,
         email,
         fullName,
-        avatar: avatar?.url,
-        coverImage: coverImage?.url || "",
+        avatar: {
+            url: avatar?.url,
+            public_id: avatar?.public_id
+        },
+        coverImage: {
+            url: coverImage?.url || "",
+            public_id: coverImage?.public_id || ""
+        },
         password
     })
 
