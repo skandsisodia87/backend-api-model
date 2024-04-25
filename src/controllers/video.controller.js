@@ -1,4 +1,5 @@
-import { Video } from "../models/video.model.js"
+import { Video as videoModel } from "../models/video.model.js"
+import { User as userModel } from "../models/user.model.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/ApiError.js"
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js"
@@ -13,7 +14,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All Fields are required.");
     }
 
-    const isExists = await Video.findOne({
+    const isExists = await videoModel.findOne({
         title,
         description
     });
@@ -40,7 +41,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Video is missing.")
     }
 
-    Video.create({
+    videoModel.create({
         videoFile: videoFile?.url,
         thumbnail: thumbnail?.url,
         title,
@@ -65,21 +66,127 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid video Id")
     }
 
-    const video = await Video.findById(videoId)
-        .populate(
-            {
-                path: "owner",
-                select: ["userName", "fullName"]
+    const video = await videoModel.aggregate([
+        {
+            $match: {
+                _id: mongoose.Types.ObjectId(videoId)
             }
-        )
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likes"
+            }
+        },
+        {
+            $lookup: {
+                from: "comments",
+                localField: "_id",
+                foreignField: "video",
+                as: "comments"
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "subscriptions",
+                            localField: "_id",
+                            foreignField: "channel",
+                            as: "subscribers"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            subscribersCount: {
+                                $size: "$subscribers"
+                            },
+                            isSubscribed: {
+                                $cond: {
+                                    if: {
+                                        $in: [req.user?._id, "$subscribers.subscriber"]
+                                    },
+                                    then: true,
+                                    else: false
+                                }
+                            },
+                        }
+                    },
+                    {
+                        $project: {
+                            userName: 1,
+                            isSubscribed: 1,
+                            subscribersCount: 1,
+                            "avatar.url": 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                likesCount: {
+                    $size: "$likes"
+                },
+                owner: {
+                    $first: "$owner"
+                },
+                isLiked: {
+                    $cond: {
+                        if: { $in: [req.user._id, "$likes.likedBy"] },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                "videoFile.url": 1,
+                title: 1,
+                description: 1,
+                "thumbnail.url": 1,
+                likesCount: 1,
+                owner: 1,
+                isLiked: 1,
+                duration: 1,
+                comments: 1,
+                createdAt: 1,
+                views: 1,
+            }
+        }
+    ])
 
     if (!video) {
-        return res.status(404).json(new ApiResponse(404, {}, "No video found."))
+        throw new ApiError(500, "failed to fetch video");
     }
+
+    // increment views on the video
+    await videoModel.findByIdAndUpdate(videoId, {
+        $inc: {
+            views: 1
+        }
+    })
+
+    // add this video to user watch history
+    await userModel.findByIdAndUpdate(req.user?._id,
+        {
+            $addToSet: { watchHistory: videoId }
+        }
+    )
 
     return res
         .status(200)
-        .json(new ApiResponse(200, video, "Video fetched successfully"));
+        .json(
+            new ApiResponse(200, video[0], "video details fetched successfully")
+        );
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
