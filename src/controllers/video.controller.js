@@ -1,5 +1,8 @@
 import { Video as videoModel } from "../models/video.model.js"
 import { User as userModel } from "../models/user.model.js"
+import { Like as likeModel } from "../models/like.model.js"
+import { Comment as commentModel } from "../models/comment.model.js"
+import { Playlist as playlistModel } from "../models/playlist.model.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/ApiError.js"
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js"
@@ -253,8 +256,67 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 })
 
+const deleteVideo = asyncHandler(async (req, res) => {
+    const { videoId } = req.params
+    //TODO: delete video
+
+    if (!mongoose.Types.ObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video Id")
+    }
+
+    const video = await videoModel.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(404, "No video found with given ID");
+    }
+
+    if (video?.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(401, "Unauthorised request.");
+    }
+
+    // Delete video
+    await videoModel.findByIdAndDelete(videoId);
+
+    if (!videoDeleted) {
+        throw new ApiError(500, "Failed to delete the video please try again");
+    }
+
+    // Delete from cloudinary
+    await deleteFromCloudinary(video.thumbnail.public_id);
+    await deleteFromCloudinary(video.videoFile.public_id);
+
+    // Remove video from watch history
+    await userModel.findByIdAndUpdate(
+        owner,
+        {
+            $pull: { watchHistory: videoId }
+        }
+    )
+
+    // Delete Likes
+    await likeModel.deleteMany({ video: videoId });
+
+    // Delete Comments
+    await commentModel.deleteMany({ video: videoId });
+
+    // Remove from playlist if
+    await playlistModel.updateMany(
+        {
+            owner: video.owner
+        },
+        {
+            $pull: { videos: videoId }
+        }
+    )
+
+    return res
+        .status(200)
+        .json(200, {}, "Video delete successfully")
+})
+
 export {
     publishAVideo,
     getVideoById,
-    updateVideo
+    updateVideo,
+    deleteVideo
 }
