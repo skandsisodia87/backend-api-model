@@ -6,7 +6,7 @@ import { Playlist as playlistModel } from "../models/playlist.model.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/ApiError.js"
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/Cloudinary.js"
-import mongoose from "mongoose"
+import mongoose, { isValidObjectId } from "mongoose"
 import { ApiResponse } from "../utils/ApiResponse.js"
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -350,10 +350,89 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, { isPublished: toggledVideoPublish?.isPublished }, "video publish toggle successfully"));
 })
 
+const getAllVideos = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10, query, sortBy, sortType } = req.query
+    const { userId } = req.params
+    let pipeline = [];
+
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(400, "Invalid user ID");
+    }
+
+    if (query) {
+        pipeline.push(
+            {
+                $search: {
+                    index: "search-videos",
+                    text: {
+                        query: query,
+                        path: ["title", "description"]
+                    }
+                }
+            }
+        )
+    }
+
+    if (userId) {
+        pipeline.push(
+            {
+                $match: {
+                    owner: mongoose.Types.ObjectId(userId),
+                    isPublished: true
+                }
+            }
+        )
+    }
+
+    if (sortBy && sortType) {
+        pipeline.push({
+            $sort: {
+                [sortBy]: sortType === "asc" ? 1 : -1
+            }
+        });
+    } else {
+        pipeline.push({ $sort: { createdAt: -1 } });
+    }
+
+    pipeline.push(
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            userName: 1,
+                            "avatar.url": 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$ownerDetails"
+        }
+    )
+
+    const tempData = await videoModel.aggregate(pipeline);
+
+    const options = {
+        page: parseInt(page, 1),
+        limit: parseInt(limit, 10)
+    };
+
+    const video = await videoModel.aggregatePaginate(tempData, options);
+
+    return res.status(200).json(new ApiResponse(200, video, "Videos fetched successfully"));
+})
+
 export {
     publishAVideo,
     getVideoById,
     updateVideo,
     deleteVideo,
-    togglePublishStatus
+    togglePublishStatus,
+    getAllVideos
 }
