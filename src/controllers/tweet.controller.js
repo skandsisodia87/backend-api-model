@@ -132,11 +132,11 @@ const updateTweet = asyncHandler(async (req, res) => {
         { new: true }
     )
 
-    if (!updateTweet) {
+    if (!updatedTweet) {
         throw new ApiError(500, "Something went wrong while updating tweet.")
     }
 
-    return res.status(200).json(new ApiResponse(200, updateTweet, "Tweet updated successfully"));
+    return res.status(200).json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"));
 })
 
 const deleteTweet = asyncHandler(async (req, res) => {
