@@ -44,21 +44,26 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Video is missing.")
     }
 
-    videoModel.create({
-        videoFile: videoFile?.url,
-        thumbnail: thumbnail?.url,
+    const video = await videoModel.create({
+        videoFile: {
+            url: videoFile?.url,
+            public_id: videoFile?.public_id
+        },
+        thumbnail: {
+            url: thumbnail?.url,
+            public_id: thumbnail?.public_id
+        },
         title,
         description,
         owner: req.user._id,
         duration: videoFile?.duration
-    }, (err, video) => {
-
-        if (err) {
-            throw new ApiError(500, "Failed to upload Video");
-        }
-        return res.status(201).json(new ApiResponse(201, video, "Video uploaded successfully."));
     })
 
+    if (!video) {
+        throw new ApiError(500, "Failed to upload Video");
+    }
+
+    return res.status(201).json(new ApiResponse(201, video, "Video uploaded successfully."));
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
