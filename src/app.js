@@ -26,9 +26,9 @@ import playListRoutes from "./routes/playlist.routes.js";
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/subscriptions', subscriptionRoutes);
 app.use('/api/v1/videos', videoRoutes);
-app.use('/api/v1/tweet', tweetRoutes);
-app.use('/api/v1/like', likeRoutes);
-app.use('/api/v1/comment', commentRoutes);
-app.use('/api/v1/playList', playListRoutes);
+app.use('/api/v1/tweets', tweetRoutes);
+app.use('/api/v1/likes', likeRoutes);
+app.use('/api/v1/comments', commentRoutes);
+app.use('/api/v1/playLists', playListRoutes);
 
 export { app };

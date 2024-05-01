@@ -27,19 +27,18 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200, { isLiked: false }));
     }
 
-    likeModel.create(
+    const likedVideo = await likeModel.create(
         {
             video: videoId,
             likedBy: req.user._id
-        },
-        (err, data) => {
-            if (err) {
-                throw new ApiError(500, "Something went wrong, please try again")
-            }
-
-            return res.status(200).json(new ApiResponse(200, { isLiked: true }))
         }
     )
+
+    if (!like) {
+        throw new ApiError(500, "Something went wrong, please try again")
+    }
+
+    return res.status(200).json(new ApiResponse(200, { isLiked: true }))
 })
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
@@ -65,19 +64,18 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200, { isLiked: false }));
     }
 
-    likeModel.create(
+    const likedComment = await likeModel.create(
         {
             comment: commentId,
             likedBy: req.user._id
-        },
-        (err, data) => {
-            if (err) {
-                throw new ApiError(500, "Something went wrong, please try again")
-            }
-
-            return res.status(200).json(new ApiResponse(200, { isLiked: true }))
         }
     )
+
+    if (!likedComment) {
+        throw new ApiError(500, "Something went wrong, please try again")
+    }
+
+    return res.status(200).json(new ApiResponse(200, { isLiked: true }))
 })
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
@@ -103,19 +101,18 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200, { isLiked: false }));
     }
 
-    likeModel.create(
+    const likedTweet = await likeModel.create(
         {
             tweet: tweetId,
             likedBy: req.user._id
-        },
-        (err, data) => {
-            if (err) {
-                throw new ApiError(500, "Something went wrong, please try again")
-            }
-
-            return res.status(200).json(new ApiResponse(200, { isLiked: true }))
         }
     )
+
+    if (!likedTweet) {
+        throw new ApiError(500, "Something went wrong, please try again")
+    }
+
+    return res.status(200).json(new ApiResponse(200, { isLiked: true }))
 })
 
 const getLikedVideos = asyncHandler(async (req, res) => {

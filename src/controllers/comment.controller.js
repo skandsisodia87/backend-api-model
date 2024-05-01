@@ -19,20 +19,19 @@ const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Content is required");
     }
 
-    commentModel.create(
+    const comment = await commentModel.create(
         {
             content,
             video: videoId,
             owner: req.user._id
-        },
-        (err, data) => {
-            if (err) {
-                throw new ApiError(500, "Something went wrong, please try again.")
-            }
-
-            return res.status(200).json(new ApiResponse(200, data, "Comment added successfully"));
         }
     )
+
+    if (!comment) {
+        throw new ApiError(500, "Something went wrong, please try again.")
+    }
+
+    return res.status(200).json(new ApiResponse(200, comment, "Comment added successfully"));
 })
 
 const updateComment = asyncHandler(async (req, res) => {
