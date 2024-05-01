@@ -70,14 +70,14 @@ const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: get video by id
 
-    if (!mongoose.Types.ObjectId(videoId)) {
+    if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid video Id")
     }
 
     const video = await videoModel.aggregate([
         {
             $match: {
-                _id: mongoose.Types.ObjectId(videoId)
+                _id: new mongoose.Types.ObjectId(videoId)
             }
         },
         {
@@ -237,7 +237,7 @@ const updateVideo = asyncHandler(async (req, res) => {
         await deleteFromCloudinary(thumbnailToBeDeleted);
     }
 
-    const updatedVideo = await Video.findByIdAndUpdate(videoId,
+    const updatedVideo = await videoModel.findByIdAndUpdate(videoId,
         {
             $set: {
                 title,
@@ -322,7 +322,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
 
-    if (!mongoose.Types.ObjectId(videoId)) {
+    if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid video Id");
     }
 
@@ -332,7 +332,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
         throw new ApiError(404, "No video found");
     }
 
-    if (video?.owner.toString() !== req.user._id) {
+    if (video?.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(401, "Unauthorised request");
     }
 
@@ -382,7 +382,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
         pipeline.push(
             {
                 $match: {
-                    owner: mongoose.Types.ObjectId(userId),
+                    owner: new mongoose.Types.ObjectId(userId),
                     isPublished: true
                 }
             }
@@ -430,7 +430,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
     const video = await videoModel.aggregatePaginate(tempData, options);
 
-    return res.status(200).json(new ApiResponse(200, video, "Videos fetched successfully"));
+    return res.status(200).json(new ApiResponse(200, video.docs, "Videos fetched successfully"));
 })
 
 export {

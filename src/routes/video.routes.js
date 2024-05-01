@@ -26,6 +26,6 @@ router.route("/:videoId")
     .delete(deleteVideo)
 
 router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
-router.route("/:userId").get(getAllVideos);
+router.route("/all/:userId").get(getAllVideos);
 
 export default router;
