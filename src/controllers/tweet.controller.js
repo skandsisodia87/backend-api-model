@@ -118,7 +118,7 @@ const updateTweet = asyncHandler(async (req, res) => {
     }
 
     if (tweet.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(401, "Unauthorised request")
+        throw new ApiError(401, "Unauthorized request")
     }
 
     const updatedTweet = await tweetModel.findByIdAndUpdate(
@@ -152,7 +152,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
     }
 
     if (tweet.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(401, "Unauthorised request")
+        throw new ApiError(401, "Unauthorized request")
     }
 
     await tweetModel.findByIdAndDelete(tweetId);

@@ -111,7 +111,7 @@ const deleteComment = asyncHandler(async (req, res) => {
         })
         return res.status(200).json(new ApiResponse(200, {}, "Comment deleted successfully"));
     } else {
-        throw new ApiError(401, "Unauthorised request");
+        throw new ApiError(401, "Unauthorized request");
     }
 })
 

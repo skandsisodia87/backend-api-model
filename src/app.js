@@ -23,12 +23,12 @@ import commentRoutes from "./routes/comment.routes.js";
 import playListRoutes from "./routes/playlist.routes.js";
 
 // routes declaration
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/subscriptions', subscriptionRoutes);
-app.use('/api/v1/videos', videoRoutes);
-app.use('/api/v1/tweets', tweetRoutes);
-app.use('/api/v1/likes', likeRoutes);
-app.use('/api/v1/comments', commentRoutes);
-app.use('/api/v1/playLists', playListRoutes);
+app.use('/api/v1/user', userRoutes);
+app.use('/api/v1/subscription', subscriptionRoutes);
+app.use('/api/v1/video', videoRoutes);
+app.use('/api/v1/tweet', tweetRoutes);
+app.use('/api/v1/like', likeRoutes);
+app.use('/api/v1/comment', commentRoutes);
+app.use('/api/v1/playList', playListRoutes);
 
 export { app };

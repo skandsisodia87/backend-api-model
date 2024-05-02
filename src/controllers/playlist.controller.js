@@ -3,6 +3,7 @@ import { Playlist as playListModel } from "../models/playlist.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { Video as videoModel } from "../models/video.model.js"
 
 const createPlaylist = asyncHandler(async (req, res) => {
     const { name, description } = req.body
@@ -11,20 +12,19 @@ const createPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are required.");
     }
 
-    playListModel.create(
+    const playList = await playListModel.create(
         {
             name,
             description,
             owner: req.user._id
-        },
-        (err, data) => {
-            if (err) {
-                throw new ApiError(500, "Something went wrong while creating playlist")
-            }
-
-            return res.status(200).json(new ApiResponse(200, data, "Playlist created successfully"))
         }
     )
+
+    if (!playList) {
+        throw new ApiError(500, "Something went wrong while creating playlist")
+    }
+
+    return res.status(200).json(new ApiResponse(200, playList, "Playlist created successfully"))
 })
 
 const updatePlaylist = asyncHandler(async (req, res) => {
@@ -39,14 +39,14 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         throw new ApiResponse(400, "Fields are required");
     }
 
-    const playList = await playListModel.findById(playListModel);
+    const playList = await playListModel.findById(playlistId);
 
     if (!playList) {
         throw new ApiError(404, "No Playlist found");
     }
 
     if (req.user._id.toString() !== playList.owner.toString()) {
-        throw new ApiError(401, "Unauthorised request")
+        throw new ApiError(401, "Unauthorized request")
     }
 
     const updatedPlaylist = await playListModel.findByIdAndUpdate(
@@ -60,7 +60,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         { new: true }
     )
 
-    if (!playlist) {
+    if (!updatedPlaylist) {
         throw new ApiError(404, "No playlist found")
     }
 
@@ -81,7 +81,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
     }
 
     if (req.user._id.toString() !== playList.owner.toString()) {
-        throw new ApiError(401, "Unauthorised request")
+        throw new ApiError(401, "Unauthorized request")
     }
 
     await playListModel.findByIdAndDelete(playlistId);
@@ -90,10 +90,115 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 })
 
 
+const addVideoToPlaylist = asyncHandler(async (req, res) => {
+    const { playlistId, videoId } = req.params
+
+    if (!isValidObjectId(playlistId)) {
+        throw new ApiError(400, "Invalid playlist Id");
+    }
+
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video Id")
+    }
+
+    const playlist = await playListModel.findById(playlistId);
+
+    if (!playlist) {
+        throw new ApiError(404, "No playlist found");
+    }
+
+    const video = await videoModel.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(404, "No video found");
+    }
+
+    if (playlist?.owner?.toString() !== req.user._id.toString() || video?.owner?.toString() !== req.user._id.toString()) {
+        throw new ApiError(401, "Unauthorized request");
+    }
+
+    const updatedList = await playListModel.findByIdAndUpdate(
+        playlistId,
+        {
+            $addToSet: {
+                videos: videoId
+            }
+        },
+        {
+            new: true
+        }
+    )
+
+    if (!updatedList) {
+        throw new ApiError(500, "Something went wrong, please try again.");
+    }
+
+    return res.status(200).json(new ApiResponse(200, updatedList, "PlayList updated successfully"));
+})
+
+const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
+    const { playlistId, videoId } = req.params
+
+    if (!isValidObjectId(playlistId)) {
+        throw new ApiError(400, "Invalid playlist Id");
+    }
+
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video Id")
+    }
+
+    const playlist = await playListModel.findById(playlistId);
+
+    if (!playlist) {
+        throw new ApiError(404, "No playlist found");
+    }
+
+    const video = await videoModel.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(404, "No video found");
+    }
+
+    if (playlist?.owner?.toString() !== req.user._id.toString() || video?.owner?.toString() !== req.user._id.toString()) {
+        throw new ApiError(401, "Unauthorized request");
+    }
+
+    const updatedList = await playListModel.findByIdAndUpdate(
+        playlistId,
+        {
+            $pull: {
+                videos: videoId
+            }
+        },
+        {
+            new: true
+        }
+    )
+
+    return res.status(200).json(new ApiResponse(200, updatedList, "PlayList updateds successfully"));
+
+})
+
+
+const getUserPlaylists = asyncHandler(async (req, res) => {
+    const { userId } = req.params
+    //TODO: get user playlists
+})
+
+const getPlaylistById = asyncHandler(async (req, res) => {
+    const { playlistId } = req.params
+    //TODO: get playlist by id
+})
+
+
 
 
 export {
     createPlaylist,
     updatePlaylist,
-    deletePlaylist
+    deletePlaylist,
+    getUserPlaylists,
+    getPlaylistById,
+    addVideoToPlaylist,
+    removeVideoFromPlaylist
 }

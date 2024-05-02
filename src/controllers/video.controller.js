@@ -217,7 +217,7 @@ const updateVideo = asyncHandler(async (req, res) => {
     }
 
     if (video?.owner?.toString() !== req.user._id.toString()) {
-        throw new ApiError(401, "Unauthorised request.")
+        throw new ApiError(401, "Unauthorized request.")
     }
 
     const thumbnailToBeDeleted = video?.thumbnail?.public_id;
@@ -276,7 +276,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     }
 
     if (video?.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(401, "Unauthorised request.");
+        throw new ApiError(401, "Unauthorized request.");
     }
 
     // Delete video
@@ -333,7 +333,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     }
 
     if (video?.owner.toString() !== req.user._id.toString()) {
-        throw new ApiError(401, "Unauthorised request");
+        throw new ApiError(401, "Unauthorized request");
     }
 
     const toggledVideoPublish = await videoModel.findByIdAndUpdate(
