@@ -1,4 +1,4 @@
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { Playlist as playListModel } from "../models/playlist.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -182,7 +182,80 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const { userId } = req.params
-    //TODO: get user playlists
+    console.log(userId)
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(400, "Invalid user Id");
+    }
+
+    const userPlaylist = await playListModel.aggregate([
+        {
+            $match: {
+                owner: new mongoose.Types.ObjectId(userId)
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            avatar: "$avatar.url",
+                            userName: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "videos",
+                foreignField: "_id",
+                as: "videos",
+                pipeline: [
+                    {
+                        $project: {
+                            video: "$videoFile.url",
+                            thumbnail: "$thumbnail.url",
+                            title: 1,
+                            description: 1,
+                            duration: 1,
+                            createdAt: 1,
+                            views: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                owner: {
+                    $first: "$owner"
+                }
+            }
+        },
+        {
+            $project: {
+                __v: 0,
+                updatedAt: 0,
+                createdAt: 0
+            }
+        }
+    ])
+
+    if (!userPlaylist) throw new ApiError(404, "Playlist not found");
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                userPlaylist,
+                "Playlist fetched successfully"
+            )
+        )
 })
 
 const getPlaylistById = asyncHandler(async (req, res) => {
