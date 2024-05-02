@@ -11,19 +11,18 @@ const createTweet = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Content is required");
     }
 
-    tweetModel.create(
+    const tweet = await tweetModel.create(
         {
             owner: req.user._id,
             content
-        },
-        (err, data) => {
-            if (err) {
-                throw new ApiError(500, "Something went wrong, please try again")
-            }
-
-            return res.status(201).json(new ApiResponse(201, data, "Tweet created successfully"))
         }
     )
+
+    if (!tweet) {
+        throw new ApiError(500, "Something went wrong, please try again")
+    }
+
+    return res.status(201).json(new ApiResponse(201, tweet, "Tweet created successfully"))
 })
 
 const getUserTweets = asyncHandler(async (req, res) => {
@@ -37,7 +36,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
     const tweet = await tweetModel.aggregate([
         {
             $match: {
-                owner: mongoose.Types.ObjectId(userId)
+                owner: new mongoose.Types.ObjectId(userId)
             }
         },
         {
@@ -118,7 +117,7 @@ const updateTweet = asyncHandler(async (req, res) => {
         throw new ApiError(404, "No tweet found");
     }
 
-    if (tweet.owner.toString() !== req.user._id) {
+    if (tweet.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(401, "Unauthorised request")
     }
 
@@ -152,7 +151,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
         throw new ApiError(404, "No tweet found");
     }
 
-    if (tweet.owner.toString() !== req.user._id) {
+    if (tweet.owner.toString() !== req.user._id.toString()) {
         throw new ApiError(401, "Unauthorised request")
     }
 
