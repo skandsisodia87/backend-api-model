@@ -182,7 +182,6 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const { userId } = req.params
-    console.log(userId)
     if (!isValidObjectId(userId)) {
         throw new ApiError(400, "Invalid user Id");
     }
